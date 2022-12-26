@@ -47,4 +47,4 @@ else
 fi
 
 
-#export PATH="/usr/bin:${PATH}"
+export PATH="/usr/bin:${PATH}"
