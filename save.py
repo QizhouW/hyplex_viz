@@ -16,8 +16,8 @@ import subprocess, os
 script='tiscamera-env.sh'
 pipe = subprocess.Popen(f"source ./{script}; env", stdout=subprocess.PIPE, shell=True)
 output = pipe.communicate()[0]
-env = dict((line.decode("utf-8").split("=", 1) for line in output.splitlines()))
-os.environ.update(env)
+# = dict((line.decode("utf-8").split("=", 1) for line in output.splitlines()))
+#os.environ.update(env)
 import TIS
 import cv2
 import gi

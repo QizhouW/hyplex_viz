@@ -8,6 +8,7 @@ script='tiscamera-env.sh'
 pipe = subprocess.Popen(f"source ./{script}; env", stdout=subprocess.PIPE, shell=True)
 output = pipe.communicate()[0]
 env = dict((line.decode("utf-8").split("=", 1) for line in output.splitlines()))
+import skimage.measure
 os.environ.update(env)
 import TIS
 import cv2
@@ -25,12 +26,12 @@ from gi.repository import Gst, GstVideo
 tmp=None
 framecount = 0
 #img=np.zeros((3000,4000),dtype=np.uint8)
-ccstring = 'MP42'
+ccstring = 'I420'
 fourcc = cv2.VideoWriter_fourcc(*ccstring)
-out1 = cv2.VideoWriter(f'./{ccstring}_downsample.avi',fourcc, 30, (1000,1000),0)
-out2 = cv2.VideoWriter(f'./{ccstring}_downsample2.avi',fourcc, 30, (1000,1000),0)
+#out1 = cv2.VideoWriter(f'./{ccstring}_T1.avi',fourcc, 30, (4000,3000),0)
+out2 = cv2.VideoWriter(f'./{ccstring}_down16x.avi',fourcc, 30, (1000,750),0)
 #cv2.VIDEOWRITER_PROP_QUALITY=0.5
-
+container=np.zeros((750,1000),dtype=np.uint8)
 def callback(appsink, user_data):
     """
     This function will be called in a separate thread when our appsink
@@ -39,7 +40,8 @@ def callback(appsink, user_data):
     from your other function to the callback.
     """
     sample = appsink.emit("pull-sample")
-    global framecount,tmp
+    global framecount
+    #global tmp,container
     caps = sample.get_caps()
     if sample:
         gst_buffer = sample.get_buffer()
@@ -47,23 +49,20 @@ def callback(appsink, user_data):
             (ret, buffer_map) = gst_buffer.map(Gst.MapFlags.READ)
             ### User defined operations based on the buffermap
             #d = gst_buffer.extract_dup(0, gst_buffer.get_size())
-            img = np.ndarray((3000,4000,1),buffer=buffer_map.data,dtype=np.uint8)
-            #img = img[::3,::4]
+            img = np.ndarray((3000,4000),buffer=buffer_map.data,dtype=np.uint8)
+            #container=skimage.measure.block_reduce(img, (4,4), np.mean)
+            #container = img[::4,::4]
+            container=cv2.resize(img,[750,1000])
+            container=container.astype(np.uint8)
+            container=np.expand_dims(container,axis=2)
             #print(img.shape)
             #frame = cv2.flip(frame, 0)
-            out1.write(img[::3,::4])
-            out2.write(img[1::3,1::4])
-            out2.write(img[1::3, 1::4])
-            out2.write(img[1::3, 1::4])
-            out2.write(img[1::3, 1::4])
-            out2.write(img[1::3, 1::4])
-            out2.write(img[1::3, 1::4])
-            out2.write(img[1::3, 1::4])
-            out2.write(img[1::3, 1::4])
+            out2.write(container)
             #filename=f'./channel0/{framecount}.png'
             #cv2.imwrite(filename, img)
+
             print(framecount)
-            tmp=img
+            #tmp=img
             framecount += 1
 
         finally:
@@ -111,6 +110,6 @@ print("Press Ctrl-C to stop.")
 # arrives. This will cause the pipline
 # to be set to state NULL
 
-time.sleep(10)
+time.sleep(5)
 
 pipeline.set_state(Gst.State.NULL)
